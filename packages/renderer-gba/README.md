@@ -6,10 +6,11 @@ This is a render layer designed to emulate a GBA's appearance.
 - [x] clear with gradient color
 - [x] draw image from a src at a destination (srcX, srcY, destX, destY, W, H)
   - used for drawing a simple sprite
-- [ ] draw repeating image with clamping (srcX, srcY, destX, destY, srcW, srcH, destW, destH, srcXOffset, srcYOffset, repeatX, repeatY)
+- [x] draw repeating image with clamping (srcX, srcY, destX, destY, srcW, srcH, destW, destH, srcXOffset, srcYOffset, repeatX, repeatY)
   - used for drawing a background, front effects like rain
   - repeatX, repeatY are bool; if false, then it clamps
-- [ ] draw text inside a box (font, { srcX, srcY, W, H, align \[left, center, right\] }, text)
-- [ ] alpha-blending
-- [ ] FX: mask
-- [ ] FX: color modifier
+- [x] draw box
+- [x] draw text inside a box (font, { srcX, srcY, W, H, align }, text)
+- [x] alpha-blending
+- [ ] FX: functional mask
+- [ ] FX: functional color modifier

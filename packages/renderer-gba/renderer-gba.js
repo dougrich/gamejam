@@ -22,11 +22,25 @@ function idx (width, x, y) {
 }
 
 function blendPixel (src, dest, srcIdx, destIdx) {
-  if (src[srcIdx + 3] > 128) {
-    dest[destIdx + 0] = src[srcIdx + 0]
-    dest[destIdx + 1] = src[srcIdx + 1]
-    dest[destIdx + 2] = src[srcIdx + 2]
+  const alpha = src[srcIdx + 3] / 255
+  const ialpha = 1 - alpha
+  dest[destIdx + 0] = Math.floor(src[srcIdx + 0] * alpha + dest[destIdx + 0] * ialpha)
+  dest[destIdx + 1] = Math.floor(src[srcIdx + 1] * alpha + dest[destIdx + 1] * ialpha)
+  dest[destIdx + 2] = Math.floor(src[srcIdx + 2] * alpha + dest[destIdx + 2] * ialpha)
+}
+
+function fontAt (font, c) {
+  const [srcX, srcY, srcW, srcH, xadvance, xoffset, yoffset] = font.characters[c.charCodeAt(0)] || [0, 0, 1, 1, 0, 0, 0]
+  return { srcX, srcY, srcW, srcH, xadvance, xoffset, yoffset }
+}
+
+function measure (font, text) {
+  let l = 0
+  for (const c of text) {
+    const { xadvance } = fontAt(font, c)
+    l += xadvance
   }
+  return l
 }
 
 function createRendererGBA (depends, config) {
@@ -61,13 +75,54 @@ function createRendererGBA (depends, config) {
       }
       return r
     },
-    drawImage: (img, { srcX, srcY, destX, destY, W, H }) => {
-      loop(destY, destX, destY + H, destX + W, (i, j) => {
-        const srcIdx = idx(img.width, i - destX, j - destY)
+    drawImage: (img, { srcX, srcY, destX, destY, W, H, destW, destH, srcW, srcH, repeatX, repeatY, offsetX, offsetY }) => {
+      if (destW == null) destW = W
+      if (destH == null) destH = H
+      if (srcW == null) srcW = W
+      if (srcH == null) srcH = H
+      if (offsetX == null) offsetX = 0
+      if (offsetY == null) offsetY = 0
+      loop(destY, destX, destY + destH, destX + destW, (i, j) => {
+        let oX = (i - destX - offsetX)
+        if (repeatX && oX < 0) oX = srcW - (Math.abs(oX) % srcW)
+        let oY = (j - destY - offsetY)
+        if (repeatY && oY < 0) oY = srcH - (Math.abs(oY) % srcH)
+        oX = repeatX ? oX % srcW : bound(0, srcW - 1, oX)
+        oY = repeatY ? oY % srcH : bound(0, srcH - 1, oY)
+        const srcIdx = idx(img.width, srcX + oX, srcY + oY)
         const destIdx = idx(GBA_WIDTH, i, j)
         blendPixel(img.data, data, srcIdx, destIdx)
       })
       return r
+    },
+    drawText: (font, { destX, destY, destW }, text) => {
+      let left = destX; let baseline = destY
+      const words = text.split(' ').map(x => x + ' ')
+      for (const w of words) {
+        const wordlength = measure(font, w)
+        if ((left + wordlength) > (destX + destW)) {
+          baseline += font.height
+          left = destX
+        }
+        for (const c of w) {
+          const { srcX, srcY, srcW, srcH, xadvance, xoffset, yoffset } = fontAt(font, c)
+          r.drawImage(font.image, { destX: left + xoffset, destY: baseline + yoffset, srcX, srcY, W: srcW, H: srcH })
+          left += xadvance
+        }
+      }
+      return r
+    },
+    drawBox: ({ image, borderWidth }, { destX, destY, destH, destW }) => {
+      return r
+        .drawImage(image, { srcX: 0, srcY: 0, srcW: borderWidth, srcH: borderWidth, destX, destY, destW: borderWidth, destH: borderWidth }) // top left
+        .drawImage(image, { srcX: image.width - borderWidth, srcY: 0, srcW: borderWidth, srcH: borderWidth, destX: destX + destW - borderWidth, destY, destW: borderWidth, destH: borderWidth }) // top right
+        .drawImage(image, { srcX: image.width - borderWidth, srcY: image.height - borderWidth, srcW: borderWidth, srcH: borderWidth, destX: destX + destW - borderWidth, destY: destY + destH - borderWidth, destW: borderWidth, destH: borderWidth }) // bottom right
+        .drawImage(image, { srcX: 0, srcY: image.height - borderWidth, srcW: borderWidth, srcH: borderWidth, destX, destY: destY + destH - borderWidth, destW: borderWidth, destH: borderWidth }) // bottom right
+        .drawImage(image, { srcX: borderWidth, srcY: 0, srcW: image.width - 2 * borderWidth, srcH: borderWidth, destX: destX + borderWidth, destY, destW: destW - 2 * borderWidth, destH: borderWidth, repeatX: true }) // top
+        .drawImage(image, { srcX: borderWidth, srcY: image.height - borderWidth, srcW: image.width - 2 * borderWidth, srcH: borderWidth, destX: destX + borderWidth, destY: destY + destH - borderWidth, destW: destW - 2 * borderWidth, destH: borderWidth, repeatX: true }) // bottom
+        .drawImage(image, { srcX: image.width - borderWidth, srcY: borderWidth, srcW: borderWidth, srcH: image.height - 2 * borderWidth, destX: destX + destW - borderWidth, destY: destY + borderWidth, destW: borderWidth, destH: destH - 2 * borderWidth, repeatY: true }) // right
+        .drawImage(image, { srcX: 0, srcY: borderWidth, srcW: borderWidth, srcH: image.height - 2 * borderWidth, destX, destY: destY + borderWidth, destW: borderWidth, destH: destH - 2 * borderWidth, repeatY: true }) // left
+        .drawImage(image, { srcX: borderWidth, srcY: borderWidth, srcW: image.width - 2 * borderWidth, srcH: image.height - 2 * borderWidth, destX: destX + borderWidth, destY: destY + borderWidth, destW: destW - 2 * borderWidth, destH: destH - 2 * borderWidth, repeatX: true, repeatY: true })
     },
     flush: () => {
       ctx.putImageData(imageData, 0, 0)

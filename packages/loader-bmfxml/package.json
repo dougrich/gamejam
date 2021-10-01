@@ -1,0 +1,27 @@
+{
+  "name": "@dougrich/loader-bmfxml",
+  "version": "0.1.0",
+  "description": "",
+  "main": "loader-bmfxml.js",
+  "scripts": {
+    "test": "webpack && jest",
+    "lint": "standard"
+  },
+  "author": "dougrich",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^27.0.6",
+    "standard": "^16.0.3",
+    "webpack": "^5.55.1",
+    "webpack-cli": "^4.8.0"
+  },
+  "standard": {
+    "env": [
+      "jest",
+      "browser"
+    ]
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.10"
+  }
+}
