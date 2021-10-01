@@ -10,6 +10,7 @@
     "plop": "plop"
   },
   "devDependencies": {
+    "git-hooks": "^1.1.10",
     "plop": "^2.7.4"
   }
 }
