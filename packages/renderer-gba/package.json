@@ -1,0 +1,24 @@
+{
+  "name": "@dougrich/renderer-gba",
+  "version": "0.1.0",
+  "description": "",
+  "main": "renderer-gba.js",
+  "scripts": {
+    "test": "jest",
+    "lint": "standard"
+  },
+  "author": "dougrich",
+  "license": "MIT",
+  "devDependencies": {
+    "canvas": "^2.8.0",
+    "jest": "^27.0.6",
+    "jest-image-snapshot": "^4.5.1",
+    "standard": "^16.0.3"
+  },
+  "standard": {
+    "env": [
+      "jest",
+      "browser"
+    ]
+  }
+}
