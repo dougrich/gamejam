@@ -1,0 +1,15 @@
+{
+  "description": "",
+  "author": "dougrich",
+  "license": "MIT",
+  "workspaces": [
+    "./packages/*",
+    "./apps/*"
+  ],
+  "scripts": {
+    "plop": "plop"
+  },
+  "devDependencies": {
+    "plop": "^2.7.4"
+  }
+}

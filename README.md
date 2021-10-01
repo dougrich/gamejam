@@ -1,2 +1,3 @@
 # gamejam
-The game jam mono repo
+
+This is the mono repo for my gamejam code.

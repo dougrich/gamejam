@@ -1,0 +1,23 @@
+const path = require('path')
+
+module.exports = {
+  entry: './{{name}}.test.entry.js',
+  output: {
+    path: __dirname,
+    filename: '{{name}}.test.js'
+  },
+  mode: 'development',
+  module: {
+    rules: [
+      {
+        test: /\.{{filetype}}$/,
+        type: 'javascript/auto',
+        use: [
+          {
+            loader: path.resolve(__dirname, '{{name}}.js')
+          }
+        ]
+      }
+    ]
+  }
+}
