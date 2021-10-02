@@ -87,7 +87,7 @@ function createFXRendererGBA (ctx, imageData, fx) {
         if (options.gradient) {
           const [from, to] = options.gradient
           const distance = y / GBA_HEIGHT
-          const blended = [0, 0, 0].map((_, i) => ((Math.floor(from[i] * (1 - distance) + to[i] * distance)) >> 3) << 3)
+          const blended = [0, 0, 0].map((_, i) => Math.floor(from[i] * (1 - distance) + to[i] * distance))
           color = blended
         }
         const i = idx(GBA_WIDTH, x, y)
@@ -153,6 +153,13 @@ function createFXRendererGBA (ctx, imageData, fx) {
         .drawImage(image, { srcX: borderWidth, srcY: borderWidth, srcW: image.width - 2 * borderWidth, srcH: image.height - 2 * borderWidth, destX: destX + borderWidth, destY: destY + borderWidth, destW: destW - 2 * borderWidth, destH: destH - 2 * borderWidth, repeatX: true, repeatY: true })
     },
     flush: () => {
+      for (let i = 0; i < data.length; i += 4) {
+        // make 5 bit
+        data[i + 0] = Math.floor(((data[i + 0] >> 3) / 31) * 255)
+        data[i + 1] = Math.floor(((data[i + 1] >> 3) / 31) * 255)
+        data[i + 2] = Math.floor(((data[i + 2] >> 3) / 31) * 255)
+        data[i + 3] = 255
+      }
       ctx.putImageData(imageData, 0, 0)
       return r
     },
