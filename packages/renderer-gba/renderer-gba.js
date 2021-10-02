@@ -6,27 +6,45 @@ function bound (min, max, v) {
   return Math.max(min, Math.min(max, v))
 }
 
-function loop (top, left, bottom, right, cb) {
-  top = bound(0, GBA_HEIGHT, top)
-  bottom = bound(0, GBA_HEIGHT, bottom)
-  left = bound(0, GBA_WIDTH, left)
-  right = bound(0, GBA_WIDTH, right)
-  for (let j = top; j < bottom; j++) {
-    for (let i = left; i < right; i++) {
-      cb(i, j)
+function inMask (masks, i, j) {
+  for (const m of masks) {
+    if (!m(i, j)) return false
+  }
+  return true
+}
+
+function createLoop (masks) {
+  return (top, left, bottom, right, cb) => {
+    top = bound(0, GBA_HEIGHT, top)
+    bottom = bound(0, GBA_HEIGHT, bottom)
+    left = bound(0, GBA_WIDTH, left)
+    right = bound(0, GBA_WIDTH, right)
+    for (let j = top; j < bottom; j++) {
+      for (let i = left; i < right; i++) {
+        if (inMask(masks, i, j)) {
+          cb(i, j)
+        }
+      }
     }
   }
 }
+
 function idx (width, x, y) {
   return (y * width + x) * 4
 }
 
-function blendPixel (src, dest, srcIdx, destIdx) {
-  const alpha = src[srcIdx + 3] / 255
-  const ialpha = 1 - alpha
-  dest[destIdx + 0] = Math.floor(src[srcIdx + 0] * alpha + dest[destIdx + 0] * ialpha)
-  dest[destIdx + 1] = Math.floor(src[srcIdx + 1] * alpha + dest[destIdx + 1] * ialpha)
-  dest[destIdx + 2] = Math.floor(src[srcIdx + 2] * alpha + dest[destIdx + 2] * ialpha)
+function createBlendPixel (filters) {
+  return (src, dest, srcIdx, destIdx) => {
+    let color = src.slice(srcIdx, srcIdx + 4)
+    for (const f of filters) {
+      color = f(color)
+    }
+    const alpha = color[3] / 255
+    const ialpha = 1 - alpha
+    dest[destIdx + 0] = Math.floor(color[0] * alpha + dest[destIdx + 0] * ialpha)
+    dest[destIdx + 1] = Math.floor(color[1] * alpha + dest[destIdx + 1] * ialpha)
+    dest[destIdx + 2] = Math.floor(color[2] * alpha + dest[destIdx + 2] * ialpha)
+  }
 }
 
 function fontAt (font, c) {
@@ -43,36 +61,39 @@ function measure (font, text) {
   return l
 }
 
-function createRendererGBA (depends, config) {
-  const { canvas } = depends.on('canvas')
-
-  const ctx = canvas.getContext('2d')
-  const imageData = ctx.getImageData(0, 0, GBA_WIDTH, GBA_HEIGHT)
+function createFXRendererGBA (ctx, imageData, fx) {
   const data = imageData.data
+  const masks = []
+  const filters = []
+  for (const f of fx) {
+    if (f.mask) {
+      masks.push(f.mask)
+    }
+    if (f.filter) {
+      filters.push(f.filter)
+    }
+  }
+  const loop = createLoop(masks)
+  const blendPixel = createBlendPixel(filters)
 
   const r = {
     clear: (options = {}) => {
-      if (options.gradient) {
-        const [from, to] = options.gradient
-        loop(0, 0, GBA_HEIGHT, GBA_WIDTH, (x, y) => {
+      let color = [0, 0, 0]
+      if (options.color) {
+        color = options.color
+      }
+
+      loop(0, 0, GBA_HEIGHT, GBA_WIDTH, (x, y) => {
+        if (options.gradient) {
+          const [from, to] = options.gradient
           const distance = y / GBA_HEIGHT
           const blended = [0, 0, 0].map((_, i) => ((Math.floor(from[i] * (1 - distance) + to[i] * distance)) >> 3) << 3)
-          blended.push(255)
-          blendPixel(blended, data, 0, idx(GBA_WIDTH, x, y))
-          data[idx(GBA_WIDTH, x, y) + 3] = 255
-        })
-      } else {
-        let color = [0, 0, 0]
-        if (options.color) {
-          color = options.color
+          color = blended
         }
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = color[0]
-          data[i + 1] = color[1]
-          data[i + 2] = color[2]
-          data[i + 3] = 255
-        }
-      }
+        const i = idx(GBA_WIDTH, x, y)
+        blendPixel([...color, 255], data, 0, i)
+        data[i + 3] = 255
+      })
       return r
     },
     drawImage: (img, { srcX, srcY, destX, destY, W, H, destW, destH, srcW, srcH, repeatX, repeatY, offsetX, offsetY }) => {
@@ -112,6 +133,13 @@ function createRendererGBA (depends, config) {
       }
       return r
     },
+    drawRectangle: ({ destX, destY, destW, destH, fill }) => {
+      loop(destY, destX, destY + destH, destX + destW, (i, j) => {
+        const destIdx = idx(GBA_WIDTH, i, j)
+        blendPixel(fill, data, 0, destIdx)
+      })
+      return r
+    },
     drawBox: ({ image, borderWidth }, { destX, destY, destH, destW }) => {
       return r
         .drawImage(image, { srcX: 0, srcY: 0, srcW: borderWidth, srcH: borderWidth, destX, destY, destW: borderWidth, destH: borderWidth }) // top left
@@ -127,10 +155,27 @@ function createRendererGBA (depends, config) {
     flush: () => {
       ctx.putImageData(imageData, 0, 0)
       return r
+    },
+    fx: {
+      mask: (fn) => {
+        return createFXRendererGBA(ctx, imageData, [...fx, { mask: fn }])
+      },
+      filter: (fn) => {
+        return createFXRendererGBA(ctx, imageData, [...fx, { filter: fn }])
+      }
     }
   }
 
   return r
+}
+
+function createRendererGBA (depends, config) {
+  const { canvas } = depends.on('canvas')
+
+  const ctx = canvas.getContext('2d')
+  const imageData = ctx.getImageData(0, 0, GBA_WIDTH, GBA_HEIGHT)
+
+  return createFXRendererGBA(ctx, imageData, [])
 }
 
 module.exports = {

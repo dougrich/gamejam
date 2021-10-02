@@ -170,3 +170,48 @@ test('drawText - left', async () => {
   const snapshot = canvas.toBuffer('image/png')
   expect(snapshot).toMatchImageSnapshot()
 })
+
+test('drawRectangle - simple', async () => {
+  const canvas = createCanvas()
+  createRendererGBA({ on: () => ({ canvas }) })
+    .clear()
+    .drawRectangle({
+      destX: 0,
+      destY: -32 + GBA_HEIGHT / 2,
+      destW: GBA_WIDTH,
+      destH: 64,
+      fill: [255, 255, 255, 128]
+    })
+    .flush()
+  const snapshot = canvas.toBuffer('image/png')
+  expect(snapshot).toMatchImageSnapshot()
+})
+
+test('FX: functional mask', async () => {
+  const canvas = createCanvas()
+  createRendererGBA({ on: () => ({ canvas }) })
+    .fx.mask((i, j) => i < GBA_WIDTH / 2)
+    .clear({ color: [255, 255, 0] })
+    .flush()
+  const snapshot = canvas.toBuffer('image/png')
+  expect(snapshot).toMatchImageSnapshot()
+})
+
+test('FX: functional color modifier', async () => {
+  const canvas = createCanvas()
+  const img = await loadImage('test/smile.png')
+  createRendererGBA({ on: () => ({ canvas }) })
+    .clear()
+    .fx.filter(([r, g, b, a]) => [r, r, r, a])
+    .drawImage(img, {
+      srcX: 0,
+      srcY: 0,
+      destX: 32,
+      destY: 32,
+      W: 32,
+      H: 32
+    })
+    .flush()
+  const snapshot = canvas.toBuffer('image/png')
+  expect(snapshot).toMatchImageSnapshot()
+})

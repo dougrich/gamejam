@@ -12,5 +12,6 @@ This is a render layer designed to emulate a GBA's appearance.
 - [x] draw box
 - [x] draw text inside a box (font, { srcX, srcY, W, H, align }, text)
 - [x] alpha-blending
-- [ ] FX: functional mask
-- [ ] FX: functional color modifier
+- [x] primitive: rectangular fill
+- [x] FX: functional mask
+- [x] FX: functional color modifier
