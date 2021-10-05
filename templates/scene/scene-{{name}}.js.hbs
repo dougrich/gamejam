@@ -1,0 +1,39 @@
+function createScene{{name}}(depends, config) {
+  const { graphics } = depends.on('graphics')
+  let rendering = false
+  let transition = null
+  let time = performance.now()
+  const transitionInDone = () => {
+    transition = null
+  }
+  const transitionOutDone = () => {
+    transition = null
+    rendering = false
+  }
+  const scene = {
+    transitionIn: ({ duration, fx }) => {
+      transition = { duration, done: transitionInDone, start: time }
+      if (!rendering) {
+        requestAnimationFrame(scene.render)
+      }
+    },
+    transitionOut: ({ duration, fx }) => {
+      transition = { duration, done: transitionOutDone, start: time }
+    },
+    render: (time) => {
+      if (transition) {
+
+      }
+
+      if (rendering) {
+        requestAnimationFrame(scene.render)
+      }
+    }
+  }
+
+  return scene
+}
+
+module.exports = {
+  createScene{{name}}
+}

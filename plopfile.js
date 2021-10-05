@@ -35,4 +35,22 @@ module.exports = function (plop) {
           templateFiles: 'templates/loader/**/*'
       }]
   })
+
+  plop.setGenerator('scene', {
+      description: 'new scene',
+      prompts: [{
+          type: 'input',
+          name: 'name',
+          message: 'package name please'
+      }],
+      actions: [{
+          type: 'addMany',
+          destination: 'scenes/{{name}}',
+          base: 'templates/scene',
+          globOptions: {
+            dot: true,
+          },
+          templateFiles: 'templates/scene/**/*'
+      }]
+  })
 };
